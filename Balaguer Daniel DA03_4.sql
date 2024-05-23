@@ -4,8 +4,8 @@ Count the number of customers associated to each state.
 Expected columns: state, total_customers
 */
 
--- q1 solution :
-select distinct (state), count (distinct customer_id)       --solution with a simple query, can be done with temp table but i choose to keep it simple
+-- q1 solution : 	 --solution with a simple query, can be done with temp table but i choose to keep it simple
+select distinct (state), count (distinct customer_id)      
 from customers                                              
 group by distinct (state);
 
@@ -20,13 +20,17 @@ Expected columns: clean_state, total_completed_orders
 
 -- q2 solution:
 
-with cleaned_state as (select *,    case when state in ('US State') then 'California'          --temp table to assign data from US State to California
-                                    else state end as clean_state from customers),
-     
-     orders_completed as (select * from orders o join cleaned_state cs                      --temp table to get the complete orders joining cleaned states
+	--temp table to assign data from US State to California
+with cleaned_state as 	(select *, case when state in ('US State') then 'California'          
+                                    else state end as clean_state 
+			from customers),
+	
+    	--temp table to get the complete orders joining cleaned states 
+orders_completed as 	(select * from orders o join cleaned_state cs                      
                                     on o.user_id = cs.customer_id where status in ('Complete'))
-     
-select clean_state, count (distinct (order_id)) as total_complete_orders                    --main table to get complete orders by cleaned states excluding Customer Null values
+	
+     	--main table to get complete orders by cleaned states excluding Customer Null values
+select clean_state, count (distinct (order_id)) as total_complete_orders                    
 from orders_completed                                                                       
 where customer_id is not null
 group by clean_state;
@@ -44,18 +48,22 @@ vintage_completed_orders
 
 -- q3 solution:
 
-with cleaned_state as (select *,    case when state in ('US State') then 'California'      --temp table to assign data from US State to California
+	--temp table to assign data from US State to California
+with cleaned_state as 	(select *,    case when state in ('US State') then 'California'      
                                     else state end as clean_state from customers),
 
-     orders_completed as    (select * from orders o                                             --temp table to get the complete orders joining cleaned states
-                            left join cleaned_state cs on o.user_id = cs.customer_id where status in ('Complete'))
+	--temp table to get the complete orders joining cleaned states
+orders_completed as    (select * from orders o                                             
+                            left join cleaned_state cs on o.user_id = cs.customer_id 
+			where status in ('Complete'))
 
-select coalesce (clean_state, 'Missing Data') as clean_state,                               --main table to do the calculations required grouped x clean_state
-		count (distinct oc.order_id) as total_completed_orders,
+	 --main table to do the calculations required grouped x clean_state
+select coalesce (clean_state, 'Missing Data') as clean_state,                              
+	count (distinct oc.order_id) as total_completed_orders,
         count (distinct oi.order_id) as official_completed_orders,
         count (distinct oiv.order_id) as vintage_completed_orders
- from orders_completed oc   left join order_items oi on oc.order_id = oi.order_id
- 						    left join order_items_vintage oiv on oc.order_id = oiv.order_id
+from orders_completed oc   	left join order_items oi on oc.order_id = oi.order_id
+ 				left join order_items_vintage oiv on oc.order_id = oiv.order_id
 group by clean_state order by clean_state asc; 
 
 /*
@@ -68,26 +76,31 @@ vintage_completed_orders, total_revenue.
 
 -- q4 solution:
 
-with cleaned_state as (select *,    case when state in ('US State') then 'California'                          --temp table to assign data from US State to California
+	--temp table to assign data from US State to California
+with cleaned_state as 	(select *, case when state in ('US State') then 'California'                          
                                     else state end as clean_state from customers),
 
-     total_bizz as (select * from order_items union all select * from order_items_vintage),                 --temp table to get Nike Official + Nike Vintage bizz
-
-     revenues_state as (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                    --temp table getting total rev from total bizz x state, assigning Null values to Missing Data
-                        sum (tb.sale_price) as total_rev
+	--temp table to get Nike Official + Nike Vintage bizz
+total_bizz as 		(select * from order_items union all select * from order_items_vintage),
+	
+	--temp table getting total rev from total bizz x state, assigning Null values to Missing Data
+revenues_state as 	(select coalesce (cs.clean_state, 'Missing Data') as clean_state,                    
+                        	sum (tb.sale_price) as total_rev
                         from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
                         group by cs.clean_state),
-
-     completed_orders as    (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                  --temp table doing the required calculations x complete orders x clean state, 
-    							count (distinct o.order_id) as total_completed_orders,                         --assigning also Null values to Missing Data
-								count (distinct oi.order_id) as official_completed_orders,
-    							count (distinct oiv.order_id) as vintage_completed_orders 
+	
+	--temp table doing the required calculations x complete orders x clean state, assigning also Null values to Missing Data 
+completed_orders as    (select coalesce (cs.clean_state, 'Missing Data') as clean_state,           
+    				count (distinct o.order_id) as total_completed_orders,                    
+				count (distinct oi.order_id) as official_completed_orders,
+    				count (distinct oiv.order_id) as vintage_completed_orders 
                             from orders o 	left join order_items oi on oi.order_id = o.order_id
-                          			        left join order_items_vintage oiv on o.order_id = oiv.order_id
- 											left join cleaned_state cs on o.user_id = cs.customer_id
+                          			left join order_items_vintage oiv on o.order_id = oiv.order_id
+ 						left join cleaned_state cs on o.user_id = cs.customer_id
                             where status = 'Complete' group by cs.clean_state )
-                          
-select co.clean_state, total_completed_orders, official_completed_orders, vintage_completed_orders, total_rev   --main table to show the results
+
+	--main table to show the results
+select co.clean_state, total_completed_orders, official_completed_orders, vintage_completed_orders, total_rev   
 from  completed_orders co join revenues_state rs on co.clean_state = rs.clean_state
 order by co.clean_state;
 
@@ -101,34 +114,39 @@ total_revenue,returned_items
 
 -- q5 solution:
 
-with cleaned_state as (select *,    case when state in ('US State') then 'California'                              --temp table to assign data from US State to Californ
+	 --temp table to assign data from US State to California
+with cleaned_state as 	(select *,    case when state in ('US State') then 'California'                             
                                     else state end as clean_state from customers),
-
-     total_bizz as (select * from order_items union all select * from order_items_vintage),                     --temp table to get Nike Official + Nike Vintage bizz
-
-     revenues_state as (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                        --temp table getting total rev from total bizz x state, assigning Null values to Missing Data
-                        sum (tb.sale_price) as total_rev
-                        from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
+	--temp table to get Nike Official + Nike Vintage bizz
+total_bizz as 		(select * from order_items union all select * from order_items_vintage),  
+	
+	 --temp table getting total rev from total bizz x state, assigning Null values to Missing Data
+revenues_state as 	(select coalesce (cs.clean_state, 'Missing Data') as clean_state,                       
+                        	sum (tb.sale_price) as total_rev
+                	from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
                         group by cs.clean_state),
-
-     completed_orders as    (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                   --temp table doing the required calculations x complete orders x clean state,
-    								count (distinct o.order_id) as total_completed_orders,                      --assigning also Null values to Missing Data
-									count (distinct oi.order_id) as official_completed_orders,
-    								count (distinct oiv.order_id) as vintage_completed_orders 
-                 		    from orders o 	left join order_items oi on oi.order_id = o.order_id
-                          			        left join order_items_vintage oiv on o.order_id = oiv.order_id
- 											left join cleaned_state cs on o.user_id = cs.customer_id
-                            where status = 'Complete' group by cs.clean_state ),
-
-      returned as   (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                           --temp table calculating nr. items returned
+	
+--temp table doing the required calculations x complete orders x clean state, assigning also Null values to Missing Data
+completed_orders as    (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                   
+    				count (distinct o.order_id) as total_completed_orders,                     
+				count (distinct oi.order_id) as official_completed_orders,
+    				count (distinct oiv.order_id) as vintage_completed_orders 
+                 	from orders o 	left join order_items oi on oi.order_id = o.order_id
+                          		left join order_items_vintage oiv on o.order_id = oiv.order_id
+ 					left join cleaned_state cs on o.user_id = cs.customer_id
+                        where status = 'Complete' group by cs.clean_state ),
+	
+	--temp table calculating nr. items returned
+returned as   (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                           
                     count (tb.returned_at) as returned_items 
-                    from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
-                    where tb.returned_at is not null group by cs.clean_state)                         
-
-select  r.clean_state, total_completed_orders, official_completed_orders, vintage_completed_orders, total_rev,  --main table showing the results
+                from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
+                where tb.returned_at is not null group by cs.clean_state)  
+	
+	--main table showing the results
+select  r.clean_state, total_completed_orders, official_completed_orders, vintage_completed_orders, total_rev,  
         returned_items 
-from  completed_orders co   join revenues_state rs on co.clean_state = rs.clean_state
-		                    join returned r on co.clean_state = r.clean_state
+from  completed_orders co   	join revenues_state rs on co.clean_state = rs.clean_state
+		        	join returned r on co.clean_state = r.clean_state
 order by r.clean_state;
 
 /*
@@ -143,36 +161,43 @@ total_revenue,returned_items,return_rate
 
 -- q6 solution:
 
-with cleaned_state as (select *,    case when state in ('US State') then 'California'                      --temp table to assign data from US State to Californ
+	--temp table to assign data from US State to California
+with cleaned_state as (select *,    case when state in ('US State') then 'California'                      
                                     else state end as clean_state from customers),
-                           
-     total_bizz as (select * from order_items union all select * from order_items_vintage),             --temp table to get Nike Official + Nike Vintage bizz
-     
-     revenues_state as (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                --temp table getting total rev from total bizz x state, assigning Null values to Missing Data
-                        sum (tb.sale_price) as total_rev
-                        from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
+	
+        --temp table to get Nike Official + Nike Vintage bizz               
+total_bizz as (select * from order_items union all select * from order_items_vintage),
+	
+ 	--temp table getting total rev from total bizz x state, assigning Null values to Missing Data    
+revenues_state as 	(select coalesce (cs.clean_state, 'Missing Data') as clean_state,                
+                        	sum (tb.sale_price) as total_rev
+                	from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
                         group by cs.clean_state),
-                        
-     completed_orders as    (select coalesce (cs.clean_state, 'Missing Data') as clean_state,           --temp table doing the required calculations x complete orders x clean state,
-    								count (distinct o.order_id) as total_completed_orders,              --assigning also Null values to Missing Data
-									count (distinct oi.order_id) as official_completed_orders,
-    								count (distinct oiv.order_id) as vintage_completed_orders 
-                 		    from orders o 	left join order_items oi on oi.order_id = o.order_id
-                          			        left join order_items_vintage oiv on o.order_id = oiv.order_id
- 											left join cleaned_state cs on o.user_id = cs.customer_id
+	
+--temp table doing the required calculations x complete orders x clean state, assigning also Null values to Missing Data                        
+completed_orders as    (select coalesce (cs.clean_state, 'Missing Data') as clean_state,           
+    				count (distinct o.order_id) as total_completed_orders,              
+				count (distinct oi.order_id) as official_completed_orders,
+    				count (distinct oiv.order_id) as vintage_completed_orders 
+                 	from orders o 	left join order_items oi on oi.order_id = o.order_id
+                          		left join order_items_vintage oiv on o.order_id = oiv.order_id
+ 					left join cleaned_state cs on o.user_id = cs.customer_id
                           where status = 'Complete' group by cs.clean_state ),
-                          
-      returned as   (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                   --temp table calculating nr. items returned
+	
+        --temp table calculating nr. items returned                  
+returned as   (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                  
                     count (tb.returned_at) as returned_items 
-                    from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
-                    where tb.returned_at is not null group by cs.clean_state),
-      
-      r_rate as     (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                       --temp table calculating total_orders x cleaned_state
+                from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
+                where tb.returned_at is not null group by cs.clean_state),
+	
+	 --temp table calculating total_orders x cleaned_state      
+ r_rate as     (select coalesce (cs.clean_state, 'Missing Data') as clean_state,                      
                     cast (count (tb.order_id) as float ) as total_orders
-                    from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
-                    group by cs.clean_state)
-                         
-select rr.clean_state, total_completed_orders, official_completed_orders, vintage_completed_orders, total_rev,      --main table showing the results + calculating return_rate
+                from total_bizz tb left join cleaned_state cs on tb.user_id = cs.customer_id
+                group by cs.clean_state)
+	
+	--main table showing the results + calculating return_rate                         
+select rr.clean_state, total_completed_orders, official_completed_orders, vintage_completed_orders, total_rev,      
 returned_items, r.returned_items / rr.total_orders as return_rate
 from  completed_orders co   join revenues_state rs on co.clean_state = rs.clean_state
 						    join returned r on co.clean_state = r.clean_state
